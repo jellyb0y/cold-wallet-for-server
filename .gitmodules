@@ -1,0 +1,4 @@
+[submodule "micropython"]
+	path = micropython
+	url = https://github.com/jellyb0y/micropython.git
+	branch = micropython-for-stm32-secp256k1
