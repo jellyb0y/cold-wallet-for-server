@@ -4,7 +4,7 @@ import timeout from '@utils/timeout';
 
 import type { OnErrorCallback, OnMessageCallback } from '@types';
 
-const INIT_TIMEOUT = 1500;
+const INIT_TIMEOUT = 2000;
 
 export class SerialPortSession {
     public isSerialInitiated: Promise<void>;
@@ -43,12 +43,6 @@ export class SerialPortSession {
     private async bindCallback() {
         await this.isSerialInitiated;
 
-        this.serialPort.on('data', (stdout: Buffer) => {
-            this.onMessageCallback.forEach((callback) => {
-                callback(stdout.toString().replace(/\r|\n/g, ''));
-            });
-        });
-
         this.serialPort.on('close', (error: Error) => {
             console.log('Serial port closed', error);
             this.onCloseCallback.forEach((callback) => {
@@ -68,9 +62,15 @@ export class SerialPortSession {
 
             this.serialPort.on('open', async () => {
                 console.log('Serial port opened', this.serialPort.path);
-
-                await timeout(INIT_TIMEOUT);
                 resolve();
+
+                timeout(INIT_TIMEOUT).then(() => {
+                    this.serialPort.on('data', (stdout: Buffer) => {
+                        this.onMessageCallback.forEach((callback) => {
+                            callback(stdout.toString().replace(/\r|\n/g, ''));
+                        });
+                    });
+                });
             });
         });
     }

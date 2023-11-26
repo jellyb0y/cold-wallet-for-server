@@ -82,8 +82,8 @@ import input from '@utils/input';
             };
 
             case 'x': {
+                console.log('See you! Bye!');
                 process.exit();
-                break;
             };
 
             default:
