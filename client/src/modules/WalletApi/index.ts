@@ -1,0 +1,1 @@
+export { WalletApi } from './WalletApi';

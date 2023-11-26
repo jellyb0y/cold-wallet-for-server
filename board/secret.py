@@ -1,36 +1,32 @@
+import secp256k1
 import hashlib
 import random
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 
-FILE_PATH = '/flash/secret'
+FILE_PATH = '/flash/private.key'
 
 
 class Secret():
     secret = None
-    secret_size = None
-
-    def __init__(self, secret_size = 64):
-        self.secret_size = secret_size
 
     def get_secret(self):
-        if self.secret is not None:
-            return self.secret
+        with open(FILE_PATH, 'rb') as file:
+            secret = file.read()
 
-        try:
-            with open(FILE_PATH, 'rb') as file:
-                self.secret = file.read(self.secret_size)
-                return self.secret
-        except:
-            return None
+            if not secp256k1.ec_seckey_verify(secret):
+                raise ValueError("Secret key is invalid")
+
+            return secret
     
     def generate(self):
         random_bytes = bytearray(random.getrandbits(8) for _ in range(256))
-        self.secret = hexlify(hashlib.sha256(random_bytes).digest())
-        return self.secret
+        secret = hashlib.sha256(random_bytes).digest()
+        return secret
 
     def set_secret(self, secret):
-        self.secret = secret
-
         with open(FILE_PATH, 'wb') as file:
-            file.write(self.secret)
-            return self.secret
+            file.write(secret)
+
+    def set_secret_der(self, secret_der):
+        secret = unhexlify(secret_der)
+        self.set_secret(secret)
