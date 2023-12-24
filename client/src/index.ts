@@ -1,6 +1,8 @@
 import { SerialPortSession } from '@modules/SerialPortSession';
 import { WalletApi } from '@modules/WalletApi';
+
 import input from '@utils/input';
+import { randomPayload } from '@utils/randomPayload';
 
 (async () => {
     const serialSession = new SerialPortSession();
@@ -19,6 +21,8 @@ import input from '@utils/input';
         '(3) Verify signature\n' +
         '(4) Set secret key\n' +
         '(5) Reset secret to random key\n' +
+        '...\n' +
+        '(6) Benchmark\n' +
         '...\n' +
         '(x) Close\n'+
         '----\n\n' +
@@ -77,6 +81,56 @@ import input from '@utils/input';
                 await walletApi.secretReset()
                     .then(() => console.log('A new secret key is generated!'))
                     .catch(() => console.log('Oops! Failed to generate new secret key'));
+
+                break;
+            };
+
+            case '6': {
+                const complexity = parseInt(await input('Type test complexity (number):'), 10);
+
+                if (!complexity || isNaN(complexity)) {
+                    console.log('Wrong complexity number');
+                    break;
+                }
+
+                const testsCount = parseInt(await input('Type tests count (number):'), 0);
+
+                if (!testsCount || isNaN(testsCount)) {
+                    console.log('Wrong tests count number');
+                    break;
+                }
+
+                const payload = randomPayload(complexity);
+                const testTimes: number[] = [];
+
+                try {
+                    for (let i = 0; i < testsCount; i += 1) {
+                        const startTs = Date.now();
+                        await walletApi.sign(payload);
+                        const testTime = Date.now() - startTs;
+                        testTimes.push(testTime);
+
+                        if ((i + 1) % 10 === 0) {
+                            console.log(`Bench test ${i + 1}/${testsCount}`);
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error occurred!', e);
+                    break;
+                }
+
+                const maxTestTime = Math.max(...testTimes);
+                const minTestTime = Math.min(...testTimes);
+                
+                const testTimeSum = testTimes.reduce((acc, time) => acc + time, 0);
+                const avgTestTime = Math.floor(testTimeSum / testsCount) / 1000;
+
+                console.log(
+                    `Bench test ended successfuly!\n` +
+                    `Average sign time: ${avgTestTime}s\n` +
+                    `Max time: ${maxTestTime / 1000}s\n` +
+                    `Min time: ${minTestTime / 1000}s\n`
+                );
 
                 break;
             };

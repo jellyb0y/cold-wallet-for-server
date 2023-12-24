@@ -3,7 +3,8 @@ import timeout from '@utils/timeout';
 import type { SerialPortSession } from '@modules/SerialPortSession';
 
 const SET_SECRET_TIMEOUT = 3000;
-const MSG_SEND_TIMEOUT = 10;
+const API_TIMEOUT = 100;
+const MSG_SEND_TIMEOUT = 5;
 
 export class WalletApi {
     private session: SerialPortSession;
@@ -33,7 +34,7 @@ export class WalletApi {
     public async getPubkey(): Promise<string> {
         const COMMAND = 'GET_PUBKEY';
 
-        return this.session.sendWithCallback(COMMAND)
+        return this.session.sendWithCallback(COMMAND, API_TIMEOUT)
             .then((response) => {
                 const result = this.parseResponse(COMMAND, response);
 
@@ -48,7 +49,7 @@ export class WalletApi {
     public async secretReset(): Promise<string> {
         const COMMAND = 'SECRET_RESET';
 
-        return this.session.sendWithCallback(COMMAND)
+        return this.session.sendWithCallback(COMMAND, API_TIMEOUT)
             .then((response) => {
                 const result = this.parseResponse(COMMAND, response);
 
@@ -63,7 +64,10 @@ export class WalletApi {
     public async secretSet(secret: string): Promise<string> {
         const COMMAND = 'SECRET_SET';
 
-        const promise = this.session.sendWithCallback(COMMAND)
+        await this.session.send(COMMAND);
+        await timeout(MSG_SEND_TIMEOUT);
+
+        return this.session.sendWithCallback(secret, API_TIMEOUT)
             .then(async (response) => {
                 const result = this.parseResponse(COMMAND, response);
 
@@ -74,16 +78,15 @@ export class WalletApi {
                 await timeout(SET_SECRET_TIMEOUT);
                 return result;
             });
-
-        await this.session.send(secret);
-
-        return promise;
     }
 
     public async sign(message: string): Promise<string> {
         const COMMAND = 'SIGN';
 
-        const promise = this.session.sendWithCallback(COMMAND)
+        await this.session.send(COMMAND);
+        await timeout(MSG_SEND_TIMEOUT);
+
+        return this.session.sendWithCallback(message, API_TIMEOUT)
             .then(async (response) => {
                 const result = this.parseResponse(COMMAND, response);
 
@@ -93,16 +96,21 @@ export class WalletApi {
 
                 return result;
             });
-
-        await this.session.send(message);
-
-        return promise;
     }
 
     public async verify(sig: string, message: string, pubkey: string): Promise<boolean> {
         const COMMAND = 'VERIFY';
 
-        const promise = this.session.sendWithCallback(COMMAND)
+        await this.session.send(COMMAND);
+        await timeout(MSG_SEND_TIMEOUT);
+
+        await this.session.send(sig);
+        await timeout(MSG_SEND_TIMEOUT);
+
+        await this.session.send(message);
+        await timeout(MSG_SEND_TIMEOUT);
+
+        return this.session.sendWithCallback(pubkey, API_TIMEOUT)
             .then(async (response) => {
                 const result = this.parseResponse(COMMAND, response);
 
@@ -112,13 +120,5 @@ export class WalletApi {
 
                 return result === '1';
             });
-
-        await this.session.send(sig);
-        await timeout(MSG_SEND_TIMEOUT);
-        await this.session.send(message);
-        await timeout(MSG_SEND_TIMEOUT);
-        await this.session.send(pubkey);
-
-        return promise;
     }
 }

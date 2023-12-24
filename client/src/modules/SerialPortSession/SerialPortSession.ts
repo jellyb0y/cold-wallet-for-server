@@ -115,9 +115,17 @@ export class SerialPortSession {
         });
     }
 
-    public async sendWithCallback(message: string): Promise<string> {
+    public async sendWithCallback(message: string, timeout?: number): Promise<string> {
         return new Promise((resolve, reject) => {
-            this.onMessage(resolve);
+            const offMessage = this.onMessage(resolve);
+
+            if (timeout) {
+                setTimeout(() => {
+                    offMessage();
+                    reject('Timeout!');
+                }, timeout);
+            }
+
             this.send(message).catch(reject);
         });
     }
